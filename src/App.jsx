@@ -21,6 +21,24 @@ const makeBinary7Bit = (num) => {
   return binary;
 };
 
+const makeBinary4Bit = (num) => {
+  num = parseInt(num)
+  let binary = num.toString(2);
+  if (binary.length < 4) {
+    binary = '0'.repeat(4 - binary.length) + binary;
+  }
+  return binary;
+};
+
+const makeBinaryNBit = (num, n) => {
+  num = parseInt(num)
+  let binary = num.toString(2);
+  if (binary.length < n) {
+    binary = '0'.repeat(n - binary.length) + binary;
+  }
+  return binary;
+};
+
 
 const findCodeFromName = (name, array) => {
   if (name) {
@@ -38,54 +56,89 @@ const makeHex = (num, base) => {
 };
 
 
+const decodeVars = (type, number) => {
+  if (type === 'DEC') {
+    return makeBinaryNBit(number, 16);
+  } else if (type === 'HEX') {
+    const num = parseInt(number, 16);
+    return makeBinaryNBit(num, 16);
+  }
+};
+
+
+function formatString(inputString, lengths) {
+  if (inputString) {
+    const groupLengths = lengths; // Lengths of each group
+    let formattedString = "";
+    let currentIndex = 0;
+
+    // Iterate over each group length
+    for (const length of groupLengths) {
+      const group = inputString.substr(currentIndex, length); // Extract the current group
+      formattedString += group + "-"; // Append the group to the formatted string
+      currentIndex += length; // Move the current index forward
+    }
+
+    // Remove the trailing dash
+    formattedString = formattedString.slice(0, -1);
+
+    return formattedString;
+  }
+  else {
+    return ''
+  }
+}
 
 const MiniComputer = () => {
+  const memoryLengthGroup = [1, 4, 11];
+  const contrlMemoryLengthGroup = [3, 3, 3, 2, 2, 7];
   const enteredCode = useRef(null);
   const controlCode = useRef(null);
   const [output, setOutput] = useState(null);
   const [memory, setMemory] = useState([]);
   const [controlMemory, setControlMemory] = useState([]);
-  const [accumulator, setAccumulator] = useState("");
-  const [programCounter, setProgramCounter] = useState("");
-  const [addressRegister, setAddressRegister] = useState("");
-  const [dataRegister, setDataRegister] = useState("");
-  const [CAR, setCAR] = useState("");
-  const [SBR, setSBR] = useState("");
+  const [accumulator, setAccumulator] = useState("0");
+  const [programCounter, setProgramCounter] = useState("0");
+  const [addressRegister, setAddressRegister] = useState("0");
+  const [dataRegister, setDataRegister] = useState("0");
+  const [CAR, setCAR] = useState("1000000");
+  const [SBR, setSBR] = useState("0");
   const [isRunning, setIsRunning] = useState(false);
   const [microOperationCode, setMicroOperationCode] = useState("");
 
-  const BR_JMP = () => {
-    // if cndt true:
-    setCAR(microOperationCode.slice(14, 20));
+  const BR_JMP = (cndt, code) => {
+    if (cndt) {
+    setCAR(code); // CHECK THIS PLACE
+    }
 
-
-    // if cndt false:
-    setCAR(prvCAR => 
-      {
-        const decimalPrvCAR = parseInt(prvCAR, 2);
-        decimalPrvCAR + 1;
-        return makeBinary8Bit(decimalPrvCAR);
-      });
+    else {
+      setCAR(prvCAR => 
+        {
+          const decimalPrvCAR = parseInt(prvCAR, 2);
+          return makeBinaryNBit(decimalPrvCAR + 1, 7);
+        });
+    }
   }
 
-  const BR_CALL = () => {
-    // if cndt true:
-    setSBR(
-      () => {
-        const decimalPrvCAR = parseInt(CAR, 2);
-        decimalPrvCAR + 1;
-        return makeBinary8Bit(decimalPrvCAR);
-      }
-    );
-    setCAR(microOperationCode.slice(14, 20));
+  const BR_CALL = (cndt, code) => {
+    if (cndt) {
+      setSBR(
+        (prv) => {
+          const decimalPrvCAR = parseInt(CAR, 2);
+          return makeBinaryNBit(decimalPrvCAR + 1, 7);
+        }
+      );
+      console.log(code);
+      setCAR(code);
+    }
 
-    // if cndt false:
-    setCAR(prvCAR =>
-      {
-        const decimalPrvCAR = parseInt(prvCAR, 2);
-        decimalPrvCAR + 1;
-        return makeBinary8Bit(decimalPrvCAR);
-      });
+    else {
+      setCAR(prvCAR =>
+        {
+          const decimalPrvCAR = parseInt(prvCAR, 2);
+          return makeBinaryNBit(decimalPrvCAR + 1, 7);
+        });
+    }
   }
 
 
@@ -102,15 +155,15 @@ const MiniComputer = () => {
 
 
   const CD_I = () => {
-    return dataRegister[0] === '1';
+    return dataRegister[0] == '1';
   }
 
   const CD_S = () => {
-    return accumulator[0] === '1';
+    return accumulator[0] == '1';
   }
 
   const CD_Z = () => {
-    return accumulator === '00000000';
+    return parseInt(accumulator) == 0;
   }
 
   // @@@@@@@@@@@@@@@@@@@@ FUNCTIONALITY FOR Micro Operations @@@@@@@@@@@@@@@@@@@@@@
@@ -120,19 +173,19 @@ const MiniComputer = () => {
       prvAccumulator = parseInt(prvAccumulator, 2);
       const decimalDataRegister = parseInt(dataRegister, 2);
       const result = decimalDataRegister + prvAccumulator;
-      return makeBinary8Bit(result);
+      return makeBinaryNBit(result, 16);
     });
   }
 
   const F1_CLRAC = () => {
-    setAccumulator('00000000');
+    setAccumulator('0000000000000000');
   }
 
   const F1_INCAC = () => {
     setAccumulator(prvAccumulator => {
       prvAccumulator = parseInt(prvAccumulator, 2);
       const result = prvAccumulator + 1;
-      return makeBinary8Bit(result);
+      return makeBinaryNBit(result, 16);
     });
   }
 
@@ -141,7 +194,7 @@ const MiniComputer = () => {
   }
 
   const F1_DRTAR = () => {
-    setAddressRegister(dataRegister);
+    setAddressRegister(dataRegister.slice(5, 16));
   }
 
   const F1_PCTAR = () => {
@@ -149,12 +202,13 @@ const MiniComputer = () => {
   }
 
   const F1_WRITE = () => {
-    setMemory(prvMemory => {
+      const copyOfMemory = {...memory};
       const decimalAddressRegister = parseInt(addressRegister, 2);
       const decimalDataRegister = parseInt(dataRegister, 2);
-      prvMemory[decimalAddressRegister] = makeBinary8Bit(decimalDataRegister);
-      return prvMemory;
-    });
+      console.log(copyOfMemory);
+      copyOfMemory[decimalAddressRegister].content = makeBinaryNBit(decimalDataRegister, 16); // INJA RO SHAK DARAM
+      console.log(copyOfMemory);
+      setMemory(copyOfMemory);
   }
 
   const F2_SUB = () => {
@@ -162,7 +216,7 @@ const MiniComputer = () => {
       prvAccumulator = parseInt(prvAccumulator, 2);
       const decimalDataRegister = parseInt(dataRegister, 2);
       const result = prvAccumulator - decimalDataRegister;
-      return makeBinary8Bit(result);
+      return makeBinaryNBit(result, 16);
     });
   }
 
@@ -171,7 +225,7 @@ const MiniComputer = () => {
       prvAccumulator = parseInt(prvAccumulator, 2);
       const decimalDataRegister = parseInt(dataRegister, 2);
       const result = prvAccumulator | decimalDataRegister;
-      return makeBinary8Bit(result);
+      return makeBinaryNBit(result, 16);
     });
   }
 
@@ -180,16 +234,15 @@ const MiniComputer = () => {
       prvAccumulator = parseInt(prvAccumulator, 2);
       const decimalDataRegister = parseInt(dataRegister, 2);
       const result = prvAccumulator & decimalDataRegister;
-      return makeBinary8Bit(result);
+      return makeBinaryNBit(result, 16);
     });
   }
 
   const F2_READ = () => {
     setDataRegister(prvDataRegister => {
       const decimalAddressRegister = parseInt(addressRegister, 2);
-      const decimalDataRegister = parseInt(prvDataRegister, 2);
-      const result = memory[decimalAddressRegister];
-      return makeBinary8Bit(result);
+      const result = memory[decimalAddressRegister].content;
+      return result;
     });
   }
 
@@ -201,12 +254,14 @@ const MiniComputer = () => {
     setDataRegister(prvDataRegister => {
       prvDataRegister = parseInt(prvDataRegister, 2);
       const result = prvDataRegister + 1;
-      return makeBinary8Bit(result);
+      return makeBinaryNBit(result, 16);
     });
   }
 
   const F2_PCTDR = () => {
-    setDataRegister(programCounter.slice (4, 16));
+    if (programCounter.length !== 11)
+      console.log("YECHIZI INJA GHALATE");
+    setDataRegister(programCounter);
   }
 
 
@@ -221,9 +276,14 @@ const MiniComputer = () => {
 
   const F3_COM = () => {
     setAccumulator(prvAccumulator => {
-      prvAccumulator = parseInt(prvAccumulator, 2);
-      const result = ~prvAccumulator;
-      return makeBinary8Bit(result);
+      let myStr = '';
+      for (let i = 0; i < prvAccumulator.length; i++) {
+        if (prvAccumulator[i] === '0')
+          myStr += '1';
+        else
+          myStr += '0';
+      }
+      return myStr;
     });
   }
 
@@ -247,7 +307,7 @@ const MiniComputer = () => {
     setProgramCounter(prvProgramCounter => {
       prvProgramCounter = parseInt(prvProgramCounter, 2);
       const result = prvProgramCounter + 1;
-      return makeBinary16Bit(result);
+      return makeBinaryNBit(result, 11);
     });
   }
 
@@ -313,6 +373,20 @@ const MiniComputer = () => {
     { name: 'INCPC', code: '101', action: F3_INCPC, F: 3 },
     { name: 'ARTPC', code: '110', action: F3_ARTPC, F: 3 },
     { name: 'RESERVED', code: '111', action: () => { }, F: 3 },
+  ]
+
+  const all_CD = [
+    { name: "U", code: "00", action: () => { return true } },
+    { name: "I", code: "01", action: CD_I },
+    { name: "S", code: "10", action: CD_S },
+    { name: "Z", code: "11", action: CD_Z },
+  ]
+
+  const all_BR = [
+    { name: "JMP", code: "00", action: (cndt, code) => BR_JMP(cndt, code) },
+    { name: "CALL", code: "01", action: (cndt, code) => BR_CALL(cndt, code) },
+    { name: "RET", code: "10", action: (cndt) => BR_RET(cndt) },
+    { name: "MAP", code: "11", action: (cndt) => BR_MAP(cndt) },
   ]
 
   const CD = [
@@ -389,7 +463,6 @@ const MiniComputer = () => {
         }
           labelAdr++;
       }
-      console.log(labelAddresses);
     })
 
 
@@ -407,8 +480,7 @@ const MiniComputer = () => {
       if (instruction === 'ORG') {
         addressNumberInMemory = parseInt(cd)
       }
-      else if (instruction === 'END') {
-        console.log("FYN");
+      else if (instruction === 'END') {        
       }
       else {
         theBR = findCodeFromName(br, BRANCH).code;
@@ -437,13 +509,13 @@ const MiniComputer = () => {
         });
         updateArray.push( {F1:firstF1, F2:firstF2, F3:firstF3, theCD:theCD, theBR:theBR, addr:addressNumberInMemory, label:label, nextLineAddr: makeBinary7Bit(theAddress)});
         addressNumberInMemory++;
+        console.log(line);
         }
-      console.log(line);    
     });
     const newCntrlMemory = {...controlMemory};
     updateArray.map((elem) => {
       newCntrlMemory[elem.addr] = {
-        content: elem.F1 + "-" + elem.F2 + "-" + elem.F3 + "-" + elem.theCD + "-" + elem.theBR + "-" + elem.nextLineAddr,
+        content: elem.F1 + elem.F2 + elem.F3 + elem.theCD + elem.theBR + elem.nextLineAddr,
         hexContent: makeHex(elem.F1 + elem.F2 + elem.F3 + elem.theCD + elem.theBR + elem.nextLineAddr, 2),
         label: elem.label,
         instruction: "",
@@ -452,10 +524,12 @@ const MiniComputer = () => {
     setControlMemory(newCntrlMemory);
   }
 
-  const compileCode = () => {
+  const addCodeToMemory = () => {
     const codeText = enteredCode.current.value;
     const codeTextLines = codeText.split('\n');
     const variables = [];
+    const contentList = [];
+    let memoryAddressNumber = 0;
     let addressNumberLables = 0;
     codeTextLines.map((line) => {
       const newLine = line.split(' ');
@@ -464,33 +538,117 @@ const MiniComputer = () => {
       }
       else {
         const newLine2 = line.split(', ');
-        const label = newLine2.length > 1 ? newLine[0] : '';
-        const myline = newLine2.length > 1 ? newLine[1] : newLine[0];
+        const label = newLine2.length > 1 ? newLine2[0] : '';
+        const myline = newLine2.length > 1 ? newLine2[1] : newLine2[0];
         if (label !== '') {
-          myline = myline.split(' ');
-          variables.push({ label: label, address: addressNumberLables });
+          // console.log(myline);
+          const decodeLine = myline.split(' ');
+          variables.push({ label: label, address: addressNumberLables, value: decodeVars(decodeLine[0], decodeLine[1]) });
         }
         addressNumberLables++;
       }
     })
     console.log(variables);
-    // console.log(codeTextLines);
-    // codeTextLines.map((line) => {
-    //   const sepratedLine = line.split(',');
-    //   const label = sepratedLine.length > 1 ? newLine[0] : '';
-    //   const myline = sepratedLine.length > 1 ? newLine[1] : newLine[0];
-    //   const [instruction, address] = myline.split(' ');
-    //   const newMemory = {...memory};
-    //   newMemory[addressNumberInMemory] = {
-    //     address: addressNumberInMemory,
-    //     instruction: instruction,
-    //     label: label,
-    //   }
-    //   setMemory(newMemory);
-    //   addressNumberInMemory++;
-    // }
-    // )
+
+
+    codeTextLines.map((line) => {
+      const sepratedLine = line.split(',');
+      let label = '';
+      label = sepratedLine.length > 1 ? sepratedLine[0] : '';
+      const myline = sepratedLine.length > 1 ? sepratedLine[1] : sepratedLine[0];
+      if (label === '') {
+        const [instruction, varAddress, isIndrct] = myline.split(' ');
+        
+        if (instruction === 'ORG') {
+          memoryAddressNumber = parseInt(varAddress);
+        }
+        else {
+
+          if (varAddress) {
+            const contentObject = {}
+            for (let i = 0; i < 127; i++) {
+              if (controlMemory[i].label === instruction) {
+                contentObject['instruction'] = makeBinary4Bit(i/4);
+                contentObject['addr'] = makeBinaryNBit(variables.find((elem) => elem.label === varAddress).address, 11);
+                contentObject['indrct'] = isIndrct === 'I' ? '1' : '0';
+                contentObject['addressInMemory'] = memoryAddressNumber;
+                contentList.push(contentObject);
+                break;
+              }
+            }
+          }
+          else {
+            const contentObject = {}
+            for (let i = 0; i < 127; i++) {
+              if (controlMemory[i].label === instruction) {
+                contentObject['instruction'] = makeBinary4Bit(i/4);
+                contentObject['addr'] = makeBinaryNBit(0, 11);
+                contentObject['indrct'] = '0';
+                contentObject['addressInMemory'] = memoryAddressNumber;
+                contentList.push(contentObject);
+                break;
+              }
+            }
+          }
+          memoryAddressNumber++;
+        }
+      }
+    }
+    )
+    const newMemory = {...memory};
+    contentList.map((elem) => {
+      newMemory[elem.addressInMemory] = {
+        content:  elem.indrct  + elem.instruction + elem.addr,
+        hexContent: makeHex(elem.indrct + elem.instruction + elem.addr, 2),
+        label: "",
+        instruction: "",
+      }
+    }
+    )
+    variables.map((elem) => {
+      newMemory[elem.address] = {
+        content: elem.value,
+        hexContent: "",
+        label: elem.label,
+        instruction: "",
+      }
+    }
+    )
+    setMemory(newMemory);
   } 
+
+
+  const compileCode = () => {
+    // while (programCounter < 1024) {
+      let conditionIsHappened = false;
+      console.log(CAR);
+      const shouldRunLine = controlMemory[parseInt(CAR, 2)].content;
+      const [F1, F2, F3, CD, BR, nextLineAddr] = formatString(shouldRunLine, contrlMemoryLengthGroup).split('-');
+      // console.log(F1, F2, F3, CD, BR, nextLineAddr);
+      merged_Fs.map((elem) => {
+        if ((elem.code === F1 && elem.F === 1) || (elem.code === F2 && elem.F === 2) || (elem.code === F3 && elem.F === 3)) {
+          console.log(elem);
+          elem.action();
+        }
+      })
+      all_CD.map((elem) => {
+        if (elem.code === CD) {
+          conditionIsHappened = elem.action();
+          // console.log(`NOW: ${conditionIsHappened}`);
+        }
+      })
+
+      all_BR.map((elem) => {
+        if (elem.code === BR && (elem.name === 'CALL' || elem.name === "JMP")) {
+          elem.action(conditionIsHappened, nextLineAddr);
+        }
+        else if (elem.code === BR) {
+          elem.action();
+        }
+      })
+      
+  // }
+}
 
   return (
     <div>
@@ -498,12 +656,13 @@ const MiniComputer = () => {
         <div className='input-sides'>
           <h1>Mini Computer Program</h1>
           <textarea className='controlStyle' ref={enteredCode}></textarea>
-          <button onClick={compileCode}>Submit</button>
+          <button className='buttons' onClick={addCodeToMemory}>Add to memory</button>
+          <button className='buttons' onClick={compileCode}>Compile</button>
         </div>
         <div className='input-sides'>
           <h1>Control</h1>
           <textarea className='controlStyle' ref={controlCode}></textarea>
-          <button onClick={controlTextSubmitted}>Submit Control</button>
+          <button className='buttons' onClick={controlTextSubmitted}>Submit Control</button>
         </div>
       </div>
       {output && <p>Output: {output}</p>}
@@ -511,6 +670,8 @@ const MiniComputer = () => {
       <p>PC: {programCounter}</p>
       <p>AR: {addressRegister}</p>
       <p>DR: {dataRegister}</p>
+      <p>CAR: {CAR}</p>
+      <p>SBR: {SBR}</p>
       <div className='memory-tables'>
       <table className='styled-table'>
         <thead>
@@ -528,7 +689,7 @@ const MiniComputer = () => {
               <tr key={key}>
                 <td>{key}</td>
                 <td>{makeHex(key, 10)}</td>
-                <td>{controlMemory[key].content}</td>
+                <td>{formatString(controlMemory[key].content, [3, 3, 3, 2, 2, 7])}</td>
                 <td>{controlMemory[key].label}</td>
                 <td>{controlMemory[key].hexContent}</td>
               </tr>
@@ -541,6 +702,7 @@ const MiniComputer = () => {
           <tr>
             <th>Address</th>
             <th>Hex Address</th>
+            <th>label</th>
             <th>Content</th>
             <th>Hex Content</th>
           </tr>
@@ -551,7 +713,8 @@ const MiniComputer = () => {
               <tr key={key}>
                 <td>{key}</td>
                 <td>{makeHex(key, 10)}</td>
-                <td>{memory[key].content}</td>
+                <td>{memory[key].label}</td>
+                <td>{formatString(memory[key].content, [1, 4, 11])}</td>
                 <td>{memory[key].hexContent}</td>
               </tr>
             );
