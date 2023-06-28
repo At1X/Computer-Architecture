@@ -56,7 +56,7 @@ const makeHex = (num, base) => {
 };
 
 
-const decodeVars = (type, number) => {
+const decodeVarsValue = (type, number) => {
   if (type === 'DEC') {
     return makeBinaryNBit(number, 16);
   } else if (type === 'HEX') {
@@ -89,12 +89,13 @@ function formatString(inputString, lengths) {
   }
 }
 
+
 const MiniComputer = () => {
   const memoryLengthGroup = [1, 4, 11];
   const contrlMemoryLengthGroup = [3, 3, 3, 2, 2, 7];
   const enteredCode = useRef(null);
   const controlCode = useRef(null);
-  const [output, setOutput] = useState(null);
+  const [output, _] = useState(null);
   const [memory, setMemory] = useState([]);
   const [controlMemory, setControlMemory] = useState([]);
   const [accumulator, setAccumulator] = useState("0");
@@ -104,40 +105,34 @@ const MiniComputer = () => {
   const [CAR, setCAR] = useState("1000000");
   const [SBR, setSBR] = useState("0");
   const [isRunning, setIsRunning] = useState(false);
-  const [microOperationCode, setMicroOperationCode] = useState("");
+  const [compileStart, setCompileStart] = useState(false);
+
 
   const BR_JMP = (cndt, code) => {
     if (cndt) {
-    setCAR(code); // CHECK THIS PLACE
-    }
-
-    else {
-      setCAR(prvCAR => 
-        {
-          const decimalPrvCAR = parseInt(prvCAR, 2);
-          return makeBinaryNBit(decimalPrvCAR + 1, 7);
-        });
+      setCAR(code); // CHECK THIS PLACE
+    } else {
+      setCAR(prvCAR => {
+        const decimalPrvCAR = parseInt(prvCAR, 2);
+        return makeBinaryNBit(decimalPrvCAR + 1, 7);
+      });
     }
   }
 
   const BR_CALL = (cndt, code) => {
     if (cndt) {
       setSBR(
-        (prv) => {
-          const decimalPrvCAR = parseInt(CAR, 2);
-          return makeBinaryNBit(decimalPrvCAR + 1, 7);
-        }
+          () => {
+            const decimalPrvCAR = parseInt(CAR, 2);
+            return makeBinaryNBit(decimalPrvCAR + 1, 7);
+          }
       );
-      console.log(code);
       setCAR(code);
-    }
-
-    else {
-      setCAR(prvCAR =>
-        {
-          const decimalPrvCAR = parseInt(prvCAR, 2);
-          return makeBinaryNBit(decimalPrvCAR + 1, 7);
-        });
+    } else {
+      setCAR(prvCAR => {
+        const decimalPrvCAR = parseInt(prvCAR, 2);
+        return makeBinaryNBit(decimalPrvCAR + 1, 7);
+      });
     }
   }
 
@@ -194,7 +189,7 @@ const MiniComputer = () => {
   }
 
   const F1_DRTAR = () => {
-    setAddressRegister(dataRegister.slice(5, 16));
+      setAddressRegister(dataRegister.slice(5, 16));
   }
 
   const F1_PCTAR = () => {
@@ -202,13 +197,11 @@ const MiniComputer = () => {
   }
 
   const F1_WRITE = () => {
-      const copyOfMemory = {...memory};
-      const decimalAddressRegister = parseInt(addressRegister, 2);
-      const decimalDataRegister = parseInt(dataRegister, 2);
-      console.log(copyOfMemory);
-      copyOfMemory[decimalAddressRegister].content = makeBinaryNBit(decimalDataRegister, 16); // INJA RO SHAK DARAM
-      console.log(copyOfMemory);
-      setMemory(copyOfMemory);
+    const copyOfMemory = {...memory};
+    const decimalAddressRegister = parseInt(addressRegister, 2);
+    const decimalDataRegister = parseInt(dataRegister, 2);
+    copyOfMemory[decimalAddressRegister].content = makeBinaryNBit(decimalDataRegister, 16); // INJA RO SHAK DARAM
+    setMemory(copyOfMemory);
   }
 
   const F2_SUB = () => {
@@ -317,97 +310,125 @@ const MiniComputer = () => {
 
 
   const F1 = [
-    { name: 'NOP', code: '000', action: () => { } },
-    { name: 'ADD', code: '001', action: F1_ADD },
-    { name: 'CLRAC', code: '010', action: F1_CLRAC },
-    { name: 'INCAC', code: '011', action: F1_INCAC },
-    { name: 'DRTAC', code: '100', action: F1_DRTAC },
-    { name: 'DRTAR', code: '101', action: F1_DRTAR },
-    { name: 'PCTAR', code: '110', action: F1_PCTAR },
-    { name: 'WRITE', code: '111', action: F1_WRITE },
+    {
+      name: 'NOP', code: '000', action: () => {
+      }
+    },
+    {name: 'ADD', code: '001', action: F1_ADD},
+    {name: 'CLRAC', code: '010', action: F1_CLRAC},
+    {name: 'INCAC', code: '011', action: F1_INCAC},
+    {name: 'DRTAC', code: '100', action: F1_DRTAC},
+    {name: 'DRTAR', code: '101', action: F1_DRTAR},
+    {name: 'PCTAR', code: '110', action: F1_PCTAR},
+    {name: 'WRITE', code: '111', action: F1_WRITE},
   ]
   const F2 = [
-    { name: 'NOP', code: '000', action: () => { } },
-    { name: 'SUB', code: '001', action: F2_SUB },
-    { name: 'OR', code: '010', action: F2_OR },
-    { name: 'AND', code: '011', action: F2_AND },
-    { name: 'READ', code: '100', action: F2_READ },
-    { name: 'ACTDR', code: '101', action: F2_ACTDR },
-    { name: 'INCDR', code: '110', action: F2_INCDR },
-    { name: 'PCTDR', code: '111', action: F2_PCTDR },
+    {
+      name: 'NOP', code: '000', action: () => {
+      }
+    },
+    {name: 'SUB', code: '001', action: F2_SUB},
+    {name: 'OR', code: '010', action: F2_OR},
+    {name: 'AND', code: '011', action: F2_AND},
+    {name: 'READ', code: '100', action: F2_READ},
+    {name: 'ACTDR', code: '101', action: F2_ACTDR},
+    {name: 'INCDR', code: '110', action: F2_INCDR},
+    {name: 'PCTDR', code: '111', action: F2_PCTDR},
   ]
 
   const F3 = [
-    { name: 'NOP', code: '000', action: () => { } },
-    { name: 'XOR', code: '001', action: F3_XOR },
-    { name: 'COM', code: '010', action: F3_COM },
-    { name: 'SHL', code: '011', action: F3_SHL },
-    { name: 'SHR', code: '100', action: F3_SHR },
-    { name: 'INCPC', code: '101', action: F3_INCPC },
-    { name: 'ARTPC', code: '110', action: F3_ARTPC },
-    { name: 'RESERVED', code: '111', action: () => { } },
+    {
+      name: 'NOP', code: '000', action: () => {
+      }
+    },
+    {name: 'XOR', code: '001', action: F3_XOR},
+    {name: 'COM', code: '010', action: F3_COM},
+    {name: 'SHL', code: '011', action: F3_SHL},
+    {name: 'SHR', code: '100', action: F3_SHR},
+    {name: 'INCPC', code: '101', action: F3_INCPC},
+    {name: 'ARTPC', code: '110', action: F3_ARTPC},
+    {
+      name: 'RESERVED', code: '111', action: () => {
+      }
+    },
   ]
 
   const merged_Fs = [
-    { name: 'NOP', code: '000', action: () => { }, F: 1 },
-    { name: 'ADD', code: '001', action: F1_ADD, F: 1 },
-    { name: 'CLRAC', code: '010', action: F1_CLRAC, F: 1 },
-    { name: 'INCAC', code: '011', action: F1_INCAC, F: 1 },
-    { name: 'DRTAC', code: '100', action: F1_DRTAC, F: 1 },
-    { name: 'DRTAR', code: '101', action: F1_DRTAR, F: 1 },
-    { name: 'PCTAR', code: '110', action: F1_PCTAR , F: 1},
-    { name: 'WRITE', code: '111', action: F1_WRITE, F: 1 },
-    { name: 'NOP', code: '000', action: () => { }, F: 2 },
-    { name: 'SUB', code: '001', action: F2_SUB, F: 2 },
-    { name: 'OR', code: '010', action: F2_OR, F: 2 },
-    { name: 'AND', code: '011', action: F2_AND, F: 2 },
-    { name: 'READ', code: '100', action: F2_READ, F: 2 },
-    { name: 'ACTDR', code: '101', action: F2_ACTDR, F: 2 },
-    { name: 'INCDR', code: '110', action: F2_INCDR, F: 2 },
-    { name: 'PCTDR', code: '111', action: F2_PCTDR, F: 2 },
-    { name: 'NOP', code: '000', action: () => { }, F: 3 },
-    { name: 'XOR', code: '001', action: F3_XOR, F: 3 },
-    { name: 'COM', code: '010', action: F3_COM, F: 3 },
-    { name: 'SHL', code: '011', action: F3_SHL, F: 3 },
-    { name: 'SHR', code: '100', action: F3_SHR, F: 3 },
-    { name: 'INCPC', code: '101', action: F3_INCPC, F: 3 },
-    { name: 'ARTPC', code: '110', action: F3_ARTPC, F: 3 },
-    { name: 'RESERVED', code: '111', action: () => { }, F: 3 },
+    {
+      name: 'NOP', code: '000', action: () => {
+      }, F: 1
+    },
+    {name: 'ADD', code: '001', action: F1_ADD, F: 1},
+    {name: 'CLRAC', code: '010', action: F1_CLRAC, F: 1},
+    {name: 'INCAC', code: '011', action: F1_INCAC, F: 1},
+    {name: 'DRTAC', code: '100', action: F1_DRTAC, F: 1},
+    {name: 'DRTAR', code: '101', action: F1_DRTAR, F: 1},
+    {name: 'PCTAR', code: '110', action: F1_PCTAR, F: 1},
+    {name: 'WRITE', code: '111', action: F1_WRITE, F: 1},
+    {
+      name: 'NOP', code: '000', action: () => {
+      }, F: 2
+    },
+    {name: 'SUB', code: '001', action: F2_SUB, F: 2},
+    {name: 'OR', code: '010', action: F2_OR, F: 2},
+    {name: 'AND', code: '011', action: F2_AND, F: 2},
+    {name: 'READ', code: '100', action: F2_READ, F: 2},
+    {name: 'ACTDR', code: '101', action: F2_ACTDR, F: 2},
+    {name: 'INCDR', code: '110', action: F2_INCDR, F: 2},
+    {name: 'PCTDR', code: '111', action: F2_PCTDR, F: 2},
+    {
+      name: 'NOP', code: '000', action: () => {
+      }, F: 3
+    },
+    {name: 'XOR', code: '001', action: F3_XOR, F: 3},
+    {name: 'COM', code: '010', action: F3_COM, F: 3},
+    {name: 'SHL', code: '011', action: F3_SHL, F: 3},
+    {name: 'SHR', code: '100', action: F3_SHR, F: 3},
+    {name: 'INCPC', code: '101', action: F3_INCPC, F: 3},
+    {name: 'ARTPC', code: '110', action: F3_ARTPC, F: 3},
+    {
+      name: 'RESERVED', code: '111', action: () => {
+      }, F: 3
+    },
   ]
 
   const all_CD = [
-    { name: "U", code: "00", action: () => { return true } },
-    { name: "I", code: "01", action: CD_I },
-    { name: "S", code: "10", action: CD_S },
-    { name: "Z", code: "11", action: CD_Z },
+    {
+      name: "U", code: "00", action: () => {
+        return true
+      }
+    },
+    {name: "I", code: "01", action: CD_I},
+    {name: "S", code: "10", action: CD_S},
+    {name: "Z", code: "11", action: CD_Z},
   ]
 
   const all_BR = [
-    { name: "JMP", code: "00", action: (cndt, code) => BR_JMP(cndt, code) },
-    { name: "CALL", code: "01", action: (cndt, code) => BR_CALL(cndt, code) },
-    { name: "RET", code: "10", action: (cndt) => BR_RET(cndt) },
-    { name: "MAP", code: "11", action: (cndt) => BR_MAP(cndt) },
+    {name: "JMP", code: "00", action: (cndt, code) => BR_JMP(cndt, code)},
+    {name: "CALL", code: "01", action: (cndt, code) => BR_CALL(cndt, code)},
+    {name: "RET", code: "10", action: (cndt) => BR_RET(cndt)},
+    {name: "MAP", code: "11", action: (cndt) => BR_MAP(cndt)},
   ]
 
   const CD = [
-    { name: "U", code: "00" },
-    { name: "I", code: "01" },
-    { name: "S", code: "10" },
-    { name: "Z", code: "11" },
+    {name: "U", code: "00"},
+    {name: "I", code: "01"},
+    {name: "S", code: "10"},
+    {name: "Z", code: "11"},
   ]
 
   const BRANCH = [
-    { name: "JMP", code: "00" },
-    { name: "CALL", code: "01" },
-    { name: "RET", code: "10" },
-    { name: "MAP", code: "11" },
+    {name: "JMP", code: "00"},
+    {name: "CALL", code: "01"},
+    {name: "RET", code: "10"},
+    {name: "MAP", code: "11"},
   ]
 
 
   // fill memory at first initialization with null values
   useEffect(() => {
     setMemory((prev) => {
-      const newMemory = { ...prev };
+      const newMemory = {...prev};
       for (let i = 0; i < 1024; i++) {
         newMemory[i] = {
           address: '',
@@ -421,7 +442,7 @@ const MiniComputer = () => {
 
   useEffect(() => {
     setControlMemory((prev) => {
-      const newControlMemory = { ...prev };
+      const newControlMemory = {...prev};
       for (let i = 0; i < 128; i++) {
         newControlMemory[i] = {
           address: '',
@@ -434,6 +455,36 @@ const MiniComputer = () => {
   }, []);
 
 
+// code compiles here
+  useEffect( () => {
+    setTimeout(() => {
+      if (isRunning) {
+        let conditionIsHappened = false;
+        const shouldRunLine = controlMemory[parseInt(CAR, 2)].content;
+        const [F1, F2, F3, CD, BR, nextLineAddr] = formatString(shouldRunLine, contrlMemoryLengthGroup).split('-');
+        merged_Fs.map((elem) => {
+          if ((elem.code === F1 && elem.F === 1) || (elem.code === F2 && elem.F === 2) || (elem.code === F3 && elem.F === 3)) {
+            elem.action();
+          }
+        })
+        all_CD.map((elem) => {
+          if (elem.code === CD) {
+            conditionIsHappened = elem.action();
+          }
+        })
+
+        all_BR.map((elem) => {
+          if (elem.code === BR && (elem.name === 'CALL' || elem.name === "JMP")) {
+            elem.action(conditionIsHappened, nextLineAddr);
+          } else if (elem.code === BR) {
+            elem.action();
+          }
+        })
+      }
+    }, 0)
+
+  },[CAR, isRunning])
+
 
   const controlTextSubmitted = () => {
     const controlText = controlCode.current.value;
@@ -443,27 +494,26 @@ const MiniComputer = () => {
     let firstF3;
     let addressNumberInMemory = 0;
     let labelAdr = 0;
-    const updateArray = [];
-    const labelAddresses = [];
+    const updateArray = []; // temp control memory
+    const labelAddresses = []; // labels with their addresses save here
 
     // asign labels with their addresses
     controlLines.map((line) => {
-      const [ORG, NUMBER] = line.split(" ")
+      const [ORG, NUMBER] = line.replace(/\s+/g, ' ').split(' ');
       if (ORG === "ORG") {
         labelAdr = parseInt(NUMBER);
-      }
-      else {
-        const labelArr = line.split(': ');
-        let label = '';
-        if (labelArr.length > 1) {
-          label = labelArr[0];
-          if (label !== '') {
-            labelAddresses.push({ label: label, labelAdr: labelAdr });
+      } else {
+        const label = line.includes(':') ? line.split(':')[0].trim() : undefined;
+          if (label !== undefined) {
+            labelAddresses.push({label: label, labelAdr: labelAdr});
           }
-        }
-          labelAdr++;
+          if (label === "FETCH") {
+            setCAR(makeBinaryNBit(labelAdr, 7));
+          }
+        labelAdr++;
       }
     })
+
 
 
     controlLines.map((line) => {
@@ -473,44 +523,45 @@ const MiniComputer = () => {
       let theBR = 0;
       let theCD = 0;
       let theAddress = 0;
-      const newLine = line.split(': ');
-      const label = newLine.length > 1 ? newLine[0] : '';
-      const myline = newLine.length > 1 ? newLine[1] : newLine[0];
-      const [instruction, cd, br, address] = myline.split(' ');
+      const [label, otherPartOfLine] = line.includes(':') ? [line.split(':')[0].trim(), line.split(':')[1].trim()] : [undefined, line.trim()];
+      const [instruction, cd, br, address] = otherPartOfLine.split(' ');
       if (instruction === 'ORG') {
         addressNumberInMemory = parseInt(cd)
-      }
-      else if (instruction === 'END') {        
-      }
-      else {
+      } else if (instruction === 'END') {
+        // STH MUST BE HERE BUT NOT IMPORTANT FOR NOW
+      } else {
         theBR = findCodeFromName(br, BRANCH).code;
         theCD = findCodeFromName(cd, CD).code;
         if (address === "NEXT") {
           theAddress = addressNumberInMemory + 1;
-        }
-        else if (address === undefined) {
+        } else if (address === undefined) {
           theAddress = 0;
-        }
-        else {
+        } else {
           theAddress = labelAddresses.find((elem) => elem.label === address).labelAdr;
         }
 
         instruction.split(',').map((elem, index) => {
           const theF = findCodeFromName(elem, merged_Fs);
-            if (theF.F === 1) {
-              firstF1 = theF.code;
-            }
-            else if (theF.F === 2) {
-              firstF2 = theF.code;
-            }
-            else if (theF.F === 3) {
-              firstF3 = theF.code;
-            }
+          if (theF.F === 1) {
+            firstF1 = theF.code;
+          } else if (theF.F === 2) {
+            firstF2 = theF.code;
+          } else if (theF.F === 3) {
+            firstF3 = theF.code;
+          }
         });
-        updateArray.push( {F1:firstF1, F2:firstF2, F3:firstF3, theCD:theCD, theBR:theBR, addr:addressNumberInMemory, label:label, nextLineAddr: makeBinary7Bit(theAddress)});
+        updateArray.push({
+          F1: firstF1,
+          F2: firstF2,
+          F3: firstF3,
+          theCD: theCD,
+          theBR: theBR,
+          addr: addressNumberInMemory,
+          label: label,
+          nextLineAddr: makeBinary7Bit(theAddress)
+        });
         addressNumberInMemory++;
-        console.log(line);
-        }
+      }
     });
     const newCntrlMemory = {...controlMemory};
     updateArray.map((elem) => {
@@ -524,131 +575,132 @@ const MiniComputer = () => {
     setControlMemory(newCntrlMemory);
   }
 
+  // run only when add code button clicked
   const addCodeToMemory = () => {
     const codeText = enteredCode.current.value;
-    const codeTextLines = codeText.split('\n');
-    const variables = [];
-    const contentList = [];
-    let memoryAddressNumber = 0;
-    let addressNumberLables = 0;
+    const codeTextLines = codeText.split('\n'); // split code text into lines
+    const variables = []; // all labels mapped to their addresses in this Array
+    const contentList = []; // each memory line data adds to this array
+
+    let memoryAddressNumber = 0; // this address use for writing each line 
+    let addressNumberLables = 0; // this address use for writing each label
+
+
+    // this map is for fetch & save all labels and their addresses
     codeTextLines.map((line) => {
-      const newLine = line.split(' ');
-      if (newLine[0] === 'ORG') {
-        addressNumberLables = parseInt(newLine[1]);
+      const fetchedLine = line.replace(/\s+/g, ' ').split(' '); // remove extra spaces and split line into words
+
+      // checks if we fetching the line that contains ORG
+      if (fetchedLine[0] === 'ORG') {
+        addressNumberLables = parseInt(fetchedLine[1], 16); // set the address number to the value after ORG
       }
-      else {
-        const newLine2 = line.split(', ');
-        const label = newLine2.length > 1 ? newLine2[0] : '';
-        const myline = newLine2.length > 1 ? newLine2[1] : newLine2[0];
-        if (label !== '') {
-          // console.log(myline);
-          const decodeLine = myline.split(' ');
-          variables.push({ label: label, address: addressNumberLables, value: decodeVars(decodeLine[0], decodeLine[1]) });
-        }
+
+      // if sth like "DEC 10" or "HEX 0A" fetched
+      else if (fetchedLine[0] === 'HEX' || fetchedLine[0] === 'DEC') {
+        variables.push({
+          label: "",
+          address: addressNumberLables,
+          value: decodeVarsValue(fetchedLine[0], fetchedLine[1])
+        });
         addressNumberLables++;
       }
-    })
-    console.log(variables);
 
-
-    codeTextLines.map((line) => {
-      const sepratedLine = line.split(',');
-      let label = '';
-      label = sepratedLine.length > 1 ? sepratedLine[0] : '';
-      const myline = sepratedLine.length > 1 ? sepratedLine[1] : sepratedLine[0];
-      if (label === '') {
-        const [instruction, varAddress, isIndrct] = myline.split(' ');
-        
-        if (instruction === 'ORG') {
-          memoryAddressNumber = parseInt(varAddress);
+      // if its an instruction
+      else {
+        const fetchedLine = line.replace(/\s+/g, ' ').split(', '); // remove extra spaces and split line into words
+        const label = fetchedLine.length > 1 ? fetchedLine[0] : undefined; // if the line contains label, set the label to the first word
+        const AllTextExcludedLabel = fetchedLine.length > 1 ? fetchedLine[1] : fetchedLine[0];
+        if (label !== undefined) { // we got a line that has a label and we have to save this address
+          const decodeLine = AllTextExcludedLabel.split(' ');
+          variables.push({
+            label: label,
+            address: addressNumberLables,
+            value: decodeVarsValue(decodeLine[0], decodeLine[1])
+          });
         }
-        else {
-
-          if (varAddress) {
-            const contentObject = {}
-            for (let i = 0; i < 127; i++) {
-              if (controlMemory[i].label === instruction) {
-                contentObject['instruction'] = makeBinary4Bit(i/4);
-                contentObject['addr'] = makeBinaryNBit(variables.find((elem) => elem.label === varAddress).address, 11);
-                contentObject['indrct'] = isIndrct === 'I' ? '1' : '0';
-                contentObject['addressInMemory'] = memoryAddressNumber;
-                contentList.push(contentObject);
-                break;
-              }
-            }
-          }
-          else {
-            const contentObject = {}
-            for (let i = 0; i < 127; i++) {
-              if (controlMemory[i].label === instruction) {
-                contentObject['instruction'] = makeBinary4Bit(i/4);
-                contentObject['addr'] = makeBinaryNBit(0, 11);
-                contentObject['indrct'] = '0';
-                contentObject['addressInMemory'] = memoryAddressNumber;
-                contentList.push(contentObject);
-                break;
-              }
-            }
-          }
-          memoryAddressNumber++;
-        }
+        addressNumberLables++; // we put it here because we want to increase write address only when fetch line thats not a ORG
       }
-    }
+    })
+
+    // this map is for decode entered code and save it in main memory => second level of compiling
+    codeTextLines.map((line) => {
+          const fetchedLine = line.replace(/\s+/g, ' ');
+          const [label, instructions] = fetchedLine.includes(",") ? [fetchedLine.split(',')[0].trim(), fetchedLine.split(',')[1].trim()] : [undefined, fetchedLine];
+          if (label === undefined) {
+            const [instruction, varAddress, isIndrct] = instructions.split(' '); // extract instruction, variable address and isIndrct from line
+            if (instruction === 'ORG') {
+              memoryAddressNumber = parseInt(varAddress, 16); // this carAddress is the number in ORG, because we get sth like "ORG 500"
+            }
+            else if (instruction === 'HLT') {
+                const contentObject = {}
+                contentObject['instruction'] = "1111"; // instruction number in control memory
+                contentObject['addr'] = "11111111111"; // find second parameter address in variables array
+                contentObject['indrct'] = "1"; // set indirect bit
+                contentObject['addressInMemory'] = memoryAddressNumber;
+                contentList.push(contentObject);
+            }
+            else {
+              if (varAddress) { // if instruction has second parameter (variable address)
+                const contentObject = {}
+                for (let i = 0; i < 127; i++) {
+                  if (controlMemory[i].label === instruction) {
+                    contentObject['instruction'] = makeBinary4Bit(i / 4); // instruction number in control memory
+                    contentObject['addr'] = makeBinaryNBit(variables.find((elem) => elem.label === varAddress).address, 11); // find second parameter address in variables array
+                    contentObject['indrct'] = isIndrct === 'I' ? '1' : '0'; // set indirect bit
+                    contentObject['addressInMemory'] = memoryAddressNumber;
+                    contentList.push(contentObject);
+                    break;
+                  }
+                }
+              } else { // if instruction is just one command
+                const contentObject = {}
+                for (let i = 0; i < 127; i++) {
+                  if (controlMemory[i].label === instruction) {
+                    contentObject['instruction'] = makeBinary4Bit(i / 4);
+                    contentObject['addr'] = makeBinaryNBit(0, 11); // because we doesnt have second parameter, we set address part to 0
+                    contentObject['indrct'] = '0';
+                    contentObject['addressInMemory'] = memoryAddressNumber;
+                    contentList.push(contentObject);
+                    break;
+                  }
+                }
+              }
+              memoryAddressNumber++;
+            }
+          }
+        }
     )
     const newMemory = {...memory};
-    contentList.map((elem) => {
-      newMemory[elem.addressInMemory] = {
-        content:  elem.indrct  + elem.instruction + elem.addr,
-        hexContent: makeHex(elem.indrct + elem.instruction + elem.addr, 2),
-        label: "",
-        instruction: "",
-      }
-    }
+    contentList.map((elem) => { // add all content (non-variables) to temp-memory
+          newMemory[elem.addressInMemory] = {
+            content: elem.indrct + elem.instruction + elem.addr,
+            hexContent: makeHex(elem.indrct + elem.instruction + elem.addr, 2),
+            label: "",
+            instruction: "",
+          }
+        }
     )
-    variables.map((elem) => {
-      newMemory[elem.address] = {
-        content: elem.value,
-        hexContent: "",
-        label: elem.label,
-        instruction: "",
-      }
-    }
+    variables.map((elem) => { // add all variables to temp-memory
+          newMemory[elem.address] = {
+            content: elem.value,
+            hexContent: "",
+            label: elem.label,
+            instruction: "",
+          }
+        }
     )
-    setMemory(newMemory);
-  } 
+    setMemory(newMemory); // assign temp memory values to main memory
+  }
 
-
+  
   const compileCode = () => {
-    // while (programCounter < 1024) {
-      let conditionIsHappened = false;
-      console.log(CAR);
-      const shouldRunLine = controlMemory[parseInt(CAR, 2)].content;
-      const [F1, F2, F3, CD, BR, nextLineAddr] = formatString(shouldRunLine, contrlMemoryLengthGroup).split('-');
-      // console.log(F1, F2, F3, CD, BR, nextLineAddr);
-      merged_Fs.map((elem) => {
-        if ((elem.code === F1 && elem.F === 1) || (elem.code === F2 && elem.F === 2) || (elem.code === F3 && elem.F === 3)) {
-          console.log(elem);
-          elem.action();
-        }
-      })
-      all_CD.map((elem) => {
-        if (elem.code === CD) {
-          conditionIsHappened = elem.action();
-          // console.log(`NOW: ${conditionIsHappened}`);
-        }
-      })
+    setIsRunning(true); // after changing this state, compilation useEffect will run
+  }
 
-      all_BR.map((elem) => {
-        if (elem.code === BR && (elem.name === 'CALL' || elem.name === "JMP")) {
-          elem.action(conditionIsHappened, nextLineAddr);
-        }
-        else if (elem.code === BR) {
-          elem.action();
-        }
-      })
-      
-  // }
-}
+
+
+
+
 
   return (
     <div>
