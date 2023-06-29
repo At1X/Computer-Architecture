@@ -1,8 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './styles.css';
+import { HiPlayCircle } from 'react-icons/hi2';
+import { RiAddCircleFill } from 'react-icons/ri';
+import { BsWrenchAdjustableCircleFill } from 'react-icons/bs';
+import { GoXCircleFill, GoCheckCircleFill } from 'react-icons/go';
+import { IoIosRemoveCircle } from 'react-icons/io';
+
 
 // basic computer assembler with microPrograms control 
-
 const makeBinary8Bit = (num) => {
   num = parseInt(num)
   let binary = num.toString(2);
@@ -105,7 +110,11 @@ const MiniComputer = () => {
   const [CAR, setCAR] = useState("1000000");
   const [SBR, setSBR] = useState("0");
   const [isRunning, setIsRunning] = useState(false);
-  const [compileStart, setCompileStart] = useState(false);
+  const [isEditable ,setIsEditable] = useState(true);
+  const [automatedTimeout, setAutomatedTimeout] = useState(0)
+  const [fetchAddress, setFetchAddress] = useState("1000000");
+  const [isDebugMode, setIsDebugMode] = useState(false);
+  const [isAddedTomemory, setIsAddedTomemory] = useState(false);
 
 
   const BR_JMP = (cndt, code) => {
@@ -189,6 +198,10 @@ const MiniComputer = () => {
   }
 
   const F1_DRTAR = () => {
+      if (dataRegister.slice(5, 16) === "11111111111") {
+        setIsRunning(false);
+        return;
+      }
       setAddressRegister(dataRegister.slice(5, 16));
   }
 
@@ -429,7 +442,7 @@ const MiniComputer = () => {
   useEffect(() => {
     setMemory((prev) => {
       const newMemory = {...prev};
-      for (let i = 0; i < 1024; i++) {
+      for (let i = 0; i < 2048; i++) {
         newMemory[i] = {
           address: '',
           instruction: '',
@@ -458,7 +471,7 @@ const MiniComputer = () => {
 // code compiles here
   useEffect( () => {
     setTimeout(() => {
-      if (isRunning) {
+      if (isRunning && !isDebugMode) {
         let conditionIsHappened = false;
         const shouldRunLine = controlMemory[parseInt(CAR, 2)].content;
         const [F1, F2, F3, CD, BR, nextLineAddr] = formatString(shouldRunLine, contrlMemoryLengthGroup).split('-');
@@ -481,7 +494,7 @@ const MiniComputer = () => {
           }
         })
       }
-    }, 0)
+    }, automatedTimeout)
 
   },[CAR, isRunning])
 
@@ -508,7 +521,9 @@ const MiniComputer = () => {
             labelAddresses.push({label: label, labelAdr: labelAdr});
           }
           if (label === "FETCH") {
+            // console.log("SALAM", labelAdr);
             setCAR(makeBinaryNBit(labelAdr, 7));
+            setFetchAddress(makeBinaryNBit(labelAdr, 7));
           }
         labelAdr++;
       }
@@ -689,92 +704,194 @@ const MiniComputer = () => {
           }
         }
     )
+    setIsAddedTomemory(true); // after changing this state
     setMemory(newMemory); // assign temp memory values to main memory
   }
 
   
   const compileCode = () => {
+    if (!isAddedTomemory) {
+      return;
+    }
     setIsRunning(true); // after changing this state, compilation useEffect will run
   }
 
 
+  const disableEdit = () => {
+    setIsEditable((prv) => !prv);
+  }
 
+  const timeoutChanged = (e) => {
+    setAutomatedTimeout(e.target.value)
+  }
 
+  const cleanUpAllRegisters = () => {
+    setMemory((prev) => {
+      const newMemory = {...prev};
+      for (let i = 0; i < 2048; i++) {
+        newMemory[i] = {
+          address: '',
+          instruction: '',
+          label: '',
+        };
+      }
+      return newMemory;
+    });
+    setCAR(fetchAddress)
+    setAccumulator('0');
+    setProgramCounter('0');
+    setAddressRegister('0');
+    setDataRegister('0');
+    setSBR('0')
+    setIsRunning(false);
+    setIsDebugMode(false);
+    setIsAddedTomemory(false);
+  }
 
+  const debugRunner = () => {
+    if (!isAddedTomemory) {
+      return;
+    }
+    setIsDebugMode(true);
+    let conditionIsHappened = false;
+    const shouldRunLine = controlMemory[parseInt(CAR, 2)].content;
+    const [F1, F2, F3, CD, BR, nextLineAddr] = formatString(shouldRunLine, contrlMemoryLengthGroup).split('-');
+    merged_Fs.map((elem) => {
+      if ((elem.code === F1 && elem.F === 1) || (elem.code === F2 && elem.F === 2) || (elem.code === F3 && elem.F === 3)) {
+        elem.action();
+      }
+    })
+    all_CD.map((elem) => {
+      if (elem.code === CD) {
+        conditionIsHappened = elem.action();
+      }
+    })
+
+    all_BR.map((elem) => {
+      if (elem.code === BR && (elem.name === 'CALL' || elem.name === "JMP")) {
+        elem.action(conditionIsHappened, nextLineAddr);
+      } else if (elem.code === BR) {
+        elem.action();
+      }
+    })
+}
 
   return (
-    <div>
+    <div className='container'>
       <div className='textAreas'>
         <div className='input-sides'>
-          <h1>Mini Computer Program</h1>
-          <textarea className='controlStyle' ref={enteredCode}></textarea>
-          <button className='buttons' onClick={addCodeToMemory}>Add to memory</button>
-          <button className='buttons' onClick={compileCode}>Compile</button>
+          <h1>محیط برنامه‌نویسی</h1>
+          <div className='singleTextAreaDiv'>
+            <textarea className='controlStyle' ref={enteredCode}></textarea>
+            <span><RiAddCircleFill onClick={addCodeToMemory} className='AddButton'/></span>
+            <span><HiPlayCircle style={!isAddedTomemory && {"color":"rgb(160, 160, 160)", "cursor":"not-allowed"} } onClick={compileCode} className='PlayButton'/></span>
+            <span><BsWrenchAdjustableCircleFill style={!isAddedTomemory && {"color":"rgb(160, 160, 160)", "cursor":"not-allowed"}} onClick={debugRunner} className='DebugButton'/></span>
+            <span><IoIosRemoveCircle onClick={cleanUpAllRegisters} className='CleanUp'/></span>
+            <input onChange={timeoutChanged} value={automatedTimeout} placeholder='زمان اجرای خودکار'></input>
+          </div>
         </div>
         <div className='input-sides'>
-          <h1>Control</h1>
-          <textarea className='controlStyle' ref={controlCode}></textarea>
-          <button className='buttons' onClick={controlTextSubmitted}>Submit Control</button>
+          <h1>کد میکروپروگرام</h1>
+          <div className='singleTextAreaDiv'>
+            <textarea readOnly={isEditable === true ? "" : "true"} className='controlStyle' ref={controlCode}></textarea>
+            <span><RiAddCircleFill onClick={controlTextSubmitted} className='AddButton'/></span>
+            <span>{isEditable === true ? <GoXCircleFill onClick={disableEdit} className='LockButton'/> : <GoCheckCircleFill onClick={disableEdit} className='LockButton'/>}</span>
+          </div>
         </div>
       </div>
-      {output && <p>Output: {output}</p>}
-      <p>AC: {accumulator}</p>
-      <p>PC: {programCounter}</p>
-      <p>AR: {addressRegister}</p>
-      <p>DR: {dataRegister}</p>
-      <p>CAR: {CAR}</p>
-      <p>SBR: {SBR}</p>
       <div className='memory-tables'>
+      <div className='table-all'>
+      <div>حافظه میکروپروگرام</div>
       <table className='styled-table'>
         <thead>
-          <tr>
-            <th>Address</th>
-            <th>Hex Address</th>
-            <th>Content</th>
-            <th>Label</th>
-            <th>Hex Content</th>
+          <tr style={{"margin":"10px"}}>
+            <th style={{"width":"10%"}}>Address</th>
+            <th style={{"width":"20%"}}>Hex Address</th>
+            <th style={{"width":"10%"}}>Label</th>
+            <th style={{"width":"40%"}}>Content</th>
+            <th style={{"width":"15%"}}>Hex Content</th>
           </tr>
         </thead>
         <tbody>
           {Object.keys(controlMemory).map((key) => {
             return (
               <tr key={key}>
-                <td>{key}</td>
-                <td>{makeHex(key, 10)}</td>
-                <td>{formatString(controlMemory[key].content, [3, 3, 3, 2, 2, 7])}</td>
-                <td>{controlMemory[key].label}</td>
-                <td>{controlMemory[key].hexContent}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      <table className='styled-table'>
-        <thead>
-          <tr>
-            <th>Address</th>
-            <th>Hex Address</th>
-            <th>label</th>
-            <th>Content</th>
-            <th>Hex Content</th>
-          </tr>
-        </thead>
-        <tbody>
-          {Object.keys(memory).map((key) => {
-            return (
-              <tr key={key}>
-                <td>{key}</td>
-                <td>{makeHex(key, 10)}</td>
-                <td>{memory[key].label}</td>
-                <td>{formatString(memory[key].content, [1, 4, 11])}</td>
-                <td>{memory[key].hexContent}</td>
+                <td style={{"width":"10%"}}>{key}</td>
+                <td style={{"width":"20%"}}>{makeHex(key, 10)}</td>
+                <td style={{"width":"10%"}}>{controlMemory[key].label}</td>
+                <td style={{"width":"40%"}}>{formatString(controlMemory[key].content, [3, 3, 3, 2, 2, 7])}</td>
+                <td style={{"width":"15%"}}>{controlMemory[key].hexContent}</td>
               </tr>
             );
           })}
         </tbody>
       </table>
       </div>
-      <p></p>
+      <div className='table-all'>
+      <div>حافظه اصلی برنامه</div>
+        <table className='styled-table'>
+          <thead>
+            <tr style={{"margin":"10px"}}>
+              <th style={{"width":"10%"}}>Address</th>
+              <th style={{"width":"20%"}}>Hex Address</th>
+              <th style={{"width":"10%"}}>label</th>
+              <th style={{"width":"40%"}}>Content</th>
+              <th style={{"width":"15%"}}>Hex Content</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.keys(memory).map((key) => {
+              return (
+                <tr key={key}>
+                  <td style={{"width":"10%"}}>{key}</td>
+                  <td style={{"width":"20%"}}>{makeHex(key, 10)}</td>
+                  <td style={{"width":"10%"}}>{memory[key].label}</td>
+                  <td style={{"width":"40%"}}>{formatString(memory[key].content, [1, 4, 11])}</td>
+                  <td style={{"width":"15%"}}>{memory[key].hexContent}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        </div>
+        <div className='table-all registerTable'>
+        <div>رجیسترها</div>
+        <table className='styled-table'>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Acomulator</td>
+              <td>{accumulator}</td>
+            </tr>
+            <tr>
+              <td>Control AR</td>  
+              <td>{CAR}</td>
+            </tr>
+            <tr>
+              <td>Address Register</td>
+              <td>{addressRegister}</td>
+            </tr>
+            <tr>
+              <td>Program Counter</td>
+              <td>{programCounter}</td>
+            </tr>
+            <tr>
+              <td>Data Register</td>
+              <td>{dataRegister}</td>
+            </tr>
+            <tr>
+              <td>Control SBR</td>
+              <td>{SBR}</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
     </div>
   );
 };
